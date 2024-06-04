@@ -1,43 +1,62 @@
 import pandas as pd
+import csv
 import os
 
 # Definir o diretório onde estão os arquivos CSV
-diretorio = "csv_files"
+diretorio = "csv_files/05-2024"
 
 # Obter uma lista de todos os arquivos CSV no diretório
 arquivos_csv = [f for f in os.listdir(diretorio) if f.endswith(".csv")]
 
-# Inicializar um objeto ExcelWriter
-with pd.ExcelWriter("Racional 04-2024.xlsx") as writer:
-    # Iterar sobre a lista de arquivos CSV
-    for arquivo_csv in arquivos_csv:
-        nome_arquivo = os.path.splitext(arquivo_csv)[0]
-        nome_arquivo = "MENSAL - " + nome_arquivo.upper()
+# Definir as colunas que você deseja migrar
+colunas = ["Work Item Type", "ID", "Title", "Assigned To", "UsedTime"]
 
-        # Ler o arquivo CSV em um DataFrame
-        dataFrame = pd.read_csv(os.path.join(diretorio, arquivo_csv))
+try:
+    with pd.ExcelWriter("Racional 05-2024.xlsx") as writer:
+        # Iterar sobre a lista de arquivos CSV
+        for arquivo_csv in arquivos_csv:
+            nome_arquivo = os.path.splitext(arquivo_csv)[0]
+            nome_arquivo = "MENSAL - " + nome_arquivo.upper()
 
-        # Definir as colunas que você deseja migrar
-        colunas = ["Work Item Type", "ID", "Title", "Assigned To", "UsedTime"]
+            csv_file_path = os.path.join(diretorio, arquivo_csv)
 
-        # Selecionar apenas as colunas desejadas
-        dataFrame = dataFrame[colunas]
+            with open(csv_file_path, "r", encoding="utf-8-sig") as arquivo:
+                data = list(csv.reader(arquivo))
 
-        # Verificar se o DataFrame está vazio
-        if dataFrame.empty:
-            print(
-                f"O arquivo {arquivo_csv} está vazio ou não contém as colunas desejadas."
-            )
-            continue
+                # Criar um dicionário com os cabeçalhos como chaves
+                cabecalhos = [cabecalho.strip() for cabecalho in data[0]]
+                dicionario = {cabecalho: [] for cabecalho in cabecalhos}
 
-        # Calcular a soma da coluna "UsedTime"
-        total = dataFrame["UsedTime"].sum()
+                # Preencher o dicionário com os valores
+                for linha in data[1:]:
+                    for i, valor in enumerate(linha):
+                        dicionario[cabecalhos[i]].append(valor.strip())
 
-        # Criar uma linha totalizadora com a soma
-        total_row = pd.DataFrame({"UsedTime": [total]})
+                # Criar uma cópia das chaves do dicionário
+                chaves = list(dicionario.keys())
 
-        # Adicionar a linha totalizadora ao DataFrame
-        dataFrame = pd.concat([dataFrame, total_row])
+                # Remover registros do dicionário que não estão nas colunas
+                for coluna in chaves:
+                    if coluna not in colunas:
+                        del dicionario[coluna]
 
-        # Adicionar o DataFrame ao objeto ExcelWriter como uma nova aba
-        dataFrame.to_excel(writer, sheet_name=nome_arquivo, index=False)
+                dicionario_ordenado = {coluna: dicionario[coluna] for coluna in colunas}
+                dicionario_ordenado["UsedTime"] = pd.to_numeric(
+                    dicionario_ordenado["UsedTime"]
+                )
+
+                # Criar uma planilha no arquivo Excel para cada arquivo CSV com os dados do dicionário ordenado
+                dataFrame = pd.DataFrame(dicionario_ordenado)
+
+                # Calcular a soma da coluna "UsedTime"
+                total = dataFrame["UsedTime"].sum()
+
+                # Criar uma linha totalizadora com a soma
+                total_row = pd.DataFrame({"UsedTime": [total]})
+
+                # Adicionar a linha totalizadora ao DataFrame
+                dataFrame = pd.concat([dataFrame, total_row])
+
+                dataFrame.to_excel(writer, sheet_name=nome_arquivo, index=False)
+except Exception as e:
+    print(f"Ocorreu um erro ao gerar o arquivo Excel: {str(e)}")

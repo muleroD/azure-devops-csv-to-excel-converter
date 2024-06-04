@@ -13,10 +13,14 @@ colunas = ["Work Item Type", "ID", "Title", "Assigned To", "UsedTime"]
 
 try:
     with pd.ExcelWriter("Racional 05-2024.xlsx") as writer:
+
+        # Criar um dicionário para armazenar os valores do CONSOLIDADO
+        consolidado_dict = {"Nome": [], "Total de Horas": []}
+
         # Iterar sobre a lista de arquivos CSV
         for arquivo_csv in arquivos_csv:
             nome_arquivo = os.path.splitext(arquivo_csv)[0]
-            nome_arquivo = "MENSAL - " + nome_arquivo.upper()
+            nome_arquivo_mensal = "MENSAL - " + nome_arquivo.upper()
 
             csv_file_path = os.path.join(diretorio, arquivo_csv)
 
@@ -57,6 +61,16 @@ try:
                 # Adicionar a linha totalizadora ao DataFrame
                 dataFrame = pd.concat([dataFrame, total_row])
 
-                dataFrame.to_excel(writer, sheet_name=nome_arquivo, index=False)
+                dataFrame.to_excel(writer, sheet_name=nome_arquivo_mensal, index=False)
+
+                # Adicionar os valores do CONSOLIDADO ao dicionário
+                consolidado_dict["Nome"].append(nome_arquivo)
+                consolidado_dict["Total de Horas"].append(total)
+
+        # Criar um DataFrame com os valores do CONSOLIDADO
+        consolidado = pd.DataFrame(consolidado_dict)
+
+        # Adicionar a sheet "CONSOLIDADO" ao arquivo Excel
+        consolidado.to_excel(writer, sheet_name="CONSOLIDADO", index=False)
 except Exception as e:
     print(f"Ocorreu um erro ao gerar o arquivo Excel: {str(e)}")

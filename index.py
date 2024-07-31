@@ -3,7 +3,7 @@ import csv
 import os
 
 # Definir o diretório onde estão os arquivos CSV
-diretorio = "csv_files/05-2024"
+diretorio = "csv_files/07-2024"
 
 # Obter uma lista de todos os arquivos CSV no diretório
 arquivos_csv = [f for f in os.listdir(diretorio) if f.endswith(".csv")]
@@ -12,15 +12,17 @@ arquivos_csv = [f for f in os.listdir(diretorio) if f.endswith(".csv")]
 colunas = ["Work Item Type", "ID", "Title", "Assigned To", "UsedTime"]
 
 try:
-    with pd.ExcelWriter("Racional 05-2024.xlsx") as writer:
+    with pd.ExcelWriter("Racional 07-2024.xlsx") as writer:
 
-        # Criar um dicionário para armazenar os valores do CONSOLIDADO
+        # Criar um dicionário para armazenar os valores da aba CONSOLIDADO
         consolidado_dict = {"Nome": [], "Total de Horas": []}
 
         # Iterar sobre a lista de arquivos CSV
         for arquivo_csv in arquivos_csv:
             nome_arquivo = os.path.splitext(arquivo_csv)[0]
             nome_arquivo_mensal = "MENSAL - " + nome_arquivo.upper()
+
+            print("Processando o arquivo:", nome_arquivo)
 
             csv_file_path = os.path.join(diretorio, arquivo_csv)
 

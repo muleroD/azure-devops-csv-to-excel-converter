@@ -1,78 +1,37 @@
-import pandas as pd
-import csv
 import os
+import pandas as pd
 
-# Definir o diretório onde estão os arquivos CSV
-diretorio = "csv_files/07-2024"
+from src.csv_reader import read_csv_file
+from src.excel_writer import write_to_excel
+from src.environments import csv_directory, csv_files_list
 
-# Obter uma lista de todos os arquivos CSV no diretório
-arquivos_csv = [f for f in os.listdir(diretorio) if f.endswith(".csv")]
 
-# Definir as colunas que você deseja migrar
-colunas = ["Work Item Type", "ID", "Title", "Assigned To", "UsedTime"]
+def main():
+    aggregated_stats = {"Nome": [], "Total de Horas": []}
+    dataframes = {}
 
-try:
-    with pd.ExcelWriter("Racional 07-2024.xlsx") as writer:
+    for csv_file in csv_files_list:
+        file_name = os.path.splitext(csv_file)[0]
+        monthly_file_name = "MENSAL - " + file_name.upper()
 
-        # Criar um dicionário para armazenar os valores da aba CONSOLIDADO
-        consolidado_dict = {"Nome": [], "Total de Horas": []}
+        print("Processing file:", file_name)
 
-        # Iterar sobre a lista de arquivos CSV
-        for arquivo_csv in arquivos_csv:
-            nome_arquivo = os.path.splitext(arquivo_csv)[0]
-            nome_arquivo_mensal = "MENSAL - " + nome_arquivo.upper()
+        csv_file_path = os.path.join(csv_directory, csv_file)
+        data_frame = read_csv_file(csv_file_path)
 
-            print("Processando o arquivo:", nome_arquivo)
+        total = data_frame["UsedTime"].sum()
+        total_row = pd.DataFrame({"UsedTime": [total]})
+        data_frame = pd.concat([data_frame, total_row])
 
-            csv_file_path = os.path.join(diretorio, arquivo_csv)
+        dataframes[monthly_file_name] = data_frame
+        aggregated_stats["Nome"].append(file_name)
+        aggregated_stats["Total de Horas"].append(total)
 
-            with open(csv_file_path, "r", encoding="utf-8-sig") as arquivo:
-                data = list(csv.reader(arquivo))
+    write_to_excel(dataframes, aggregated_stats)
 
-                # Criar um dicionário com os cabeçalhos como chaves
-                cabecalhos = [cabecalho.strip() for cabecalho in data[0]]
-                dicionario = {cabecalho: [] for cabecalho in cabecalhos}
 
-                # Preencher o dicionário com os valores
-                for linha in data[1:]:
-                    for i, valor in enumerate(linha):
-                        dicionario[cabecalhos[i]].append(valor.strip())
-
-                # Criar uma cópia das chaves do dicionário
-                chaves = list(dicionario.keys())
-
-                # Remover registros do dicionário que não estão nas colunas
-                for coluna in chaves:
-                    if coluna not in colunas:
-                        del dicionario[coluna]
-
-                dicionario_ordenado = {coluna: dicionario[coluna] for coluna in colunas}
-                dicionario_ordenado["UsedTime"] = pd.to_numeric(
-                    dicionario_ordenado["UsedTime"]
-                )
-
-                # Criar uma planilha no arquivo Excel para cada arquivo CSV com os dados do dicionário ordenado
-                dataFrame = pd.DataFrame(dicionario_ordenado)
-
-                # Calcular a soma da coluna "UsedTime"
-                total = dataFrame["UsedTime"].sum()
-
-                # Criar uma linha totalizadora com a soma
-                total_row = pd.DataFrame({"UsedTime": [total]})
-
-                # Adicionar a linha totalizadora ao DataFrame
-                dataFrame = pd.concat([dataFrame, total_row])
-
-                dataFrame.to_excel(writer, sheet_name=nome_arquivo_mensal, index=False)
-
-                # Adicionar os valores do CONSOLIDADO ao dicionário
-                consolidado_dict["Nome"].append(nome_arquivo)
-                consolidado_dict["Total de Horas"].append(total)
-
-        # Criar um DataFrame com os valores do CONSOLIDADO
-        consolidado = pd.DataFrame(consolidado_dict)
-
-        # Adicionar a sheet "CONSOLIDADO" ao arquivo Excel
-        consolidado.to_excel(writer, sheet_name="CONSOLIDADO", index=False)
-except Exception as e:
-    print(f"Ocorreu um erro ao gerar o arquivo Excel: {str(e)}")
+if __name__ == "__main__":
+    try:
+        main()
+    except Exception as e:
+        print(f"Ocorreu um erro ao gerar o arquivo Excel: {str(e)}")
